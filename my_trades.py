@@ -4,72 +4,17 @@ Start it with 5_my_trades.bat. It only listens on this PC (localhost), reads the
 API key from %LOCALAPPDATA%\\kalshi-btc15\\secrets (never from this folder), and
 only calls read-only portfolio endpoints: it cannot place or cancel orders.
 """
-import base64
-import json
-import time
 import urllib.error
-import urllib.parse
-import urllib.request
-from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-from config import HOME, KALSHI_API
+from kalshi_auth import KEY_ID_FILE, PEM_FILE, get, get_all, load_credentials
 
 ET = ZoneInfo("America/New_York")
-SECRETS = HOME / "secrets"
-KEY_ID_FILE = SECRETS / "key_id.txt"
-PEM_FILE = SECRETS / "private_key.pem"
-API_PATH = urllib.parse.urlparse(KALSHI_API).path  # /trade-api/v2, part of what gets signed
 
 st.set_page_config(page_title="My Kalshi trades", page_icon="💼", layout="wide")
-
-
-# ---------- signed requests ----------
-
-def load_credentials():
-    if not KEY_ID_FILE.exists() or not PEM_FILE.exists():
-        return None
-    key_id = KEY_ID_FILE.read_text().strip()
-    key = serialization.load_pem_private_key(PEM_FILE.read_bytes(), password=None)
-    return key_id, key
-
-
-def get(creds, path, params=None):
-    """GET a portfolio endpoint, signed the way Kalshi requires (RSA-PSS over time + method + path)."""
-    key_id, key = creds
-    ts = str(int(time.time() * 1000))
-    msg = (ts + "GET" + API_PATH + path).encode()
-    if isinstance(key, rsa.RSAPrivateKey):
-        sig = key.sign(msg, padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
-                       hashes.SHA256())
-    else:  # Ed25519 keys sign the message directly
-        sig = key.sign(msg)
-    url = KALSHI_API + path + ("?" + urllib.parse.urlencode(params) if params else "")
-    req = urllib.request.Request(url, headers={
-        "KALSHI-ACCESS-KEY": key_id,
-        "KALSHI-ACCESS-TIMESTAMP": ts,
-        "KALSHI-ACCESS-SIGNATURE": base64.b64encode(sig).decode(),
-        "Accept": "application/json",
-    })
-    with urllib.request.urlopen(req, timeout=20) as r:
-        return json.load(r)
-
-
-def get_all(creds, path, field, params=None, max_pages=50):
-    """Follow Kalshi's cursor until the list ends."""
-    rows, params = [], dict(params or {}, limit=200)
-    for _ in range(max_pages):
-        page = get(creds, path, params)
-        rows += page.get(field) or []
-        if not page.get("cursor"):
-            break
-        params["cursor"] = page["cursor"]
-    return rows
 
 
 # ---------- field helpers (Kalshi returns cents, or newer *_dollars / *_fp strings) ----------

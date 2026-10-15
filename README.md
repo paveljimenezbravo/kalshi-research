@@ -77,6 +77,12 @@ the key ID in `%LOCALAPPDATA%\kalshi-btc15\secrets\key_id.txt` and the private
 key in `...\secrets\private_key.pem`. Both stay outside this folder, so they can't
 be committed. It only reads your portfolio; it can't place or cancel orders.
 
+**`6_autosell.bat`** watches your open positions and, once one is worth twice what
+it cost (+100%), sells all of it if it then falls 20% below its best value
+(an immediate-or-cancel, reduce-only order). It only works while its window is
+open. Settings are at the top of `autosell.py`; `--dry-run` logs without selling.
+Log: `%LOCALAPPDATA%\kalshi-btc15\logs\autosell.log`.
+
 ## Where things are
 
 | What | Where |
