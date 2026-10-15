@@ -23,6 +23,7 @@ compares the first 70% of the data with the last 30%.
 | 11 | Oct 13 | Kalshi's ETH market lags ETH or BTC prices | Recorder | pending | Running |
 | 12 | Oct 13 | A $20 order can't actually fill at the best price (depth) | Recorder books | BTC: median 4,500 contracts at the best ask; 99% of $20 orders fill at the best price. ETH: median 159; 99th-percentile slippage 1.2¢. | Not a problem at our size |
 | 13 | Oct 13 | Queue-aware maker test (back vs front of the line), recorder trades | 2 windows | Too little data | Running nightly in the morning report |
+| 15 | Oct 15 | Buy the heavy favorite (80-99c) late in the window: "87% win rate, +14% per win" | BTC Dec-Oct, 28,095 windows, first qualifying minute per window, taker at the ask | Win rates match the prices almost exactly (85-90c bucket: 86-88% wins). Last 3 minutes, 85-90c: **-1.61c per contract [-2.77, -0.45]**; 80-85c: -1.84c; 90-95c: -0.95c. No cell of 12 reaches +0.5c with a range above zero. | Dead. The price already is the probability; the fee makes it negative, and in the last 3 minutes it's reliably negative. |
 
 ## Acceptance criteria (written before seeing results)
 
