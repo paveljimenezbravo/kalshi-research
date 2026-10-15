@@ -77,7 +77,8 @@ def get_all(creds, path, field, params=None, max_pages=50):
 def dollars(d, name):
     if d.get(name + "_dollars") is not None:
         return float(d[name + "_dollars"])
-    return (d.get(name) or 0) / 100
+    v = d.get(name) or 0
+    return float(v) if isinstance(v, str) else v / 100  # strings like fee_cost are already dollars
 
 
 def count(d, name):
@@ -131,40 +132,41 @@ except urllib.error.URLError as e:
     st.error(f"Couldn't reach Kalshi: {e.reason}")
     st.stop()
 
-# Summary
+# Summary. Every fill adds contracts of its `side` at that side's price, even one labelled
+# "sell": selling YES you hold is booked as buying NO, and each YES+NO pair pays $1.
 fill_df = pd.DataFrame([{
     "Time (ET)": when(f.get("created_time")),
     "Market": f.get("ticker") or f.get("market_ticker"),
-    "Action": f.get("action", "").title(),
-    "Side": f.get("side", "").upper(),
+    "Order": f"{f.get('action', '')} {f.get('side', '')}".title().replace("Yes", "YES").replace("No", "NO"),
     "Contracts": count(f, "count"),
     "Price": dollars(f, "yes_price" if f.get("side") == "yes" else "no_price"),
-    "Fee": dollars(f, "fee_cost") if ("fee_cost" in f or "fee_cost_dollars" in f) else None,
+    "Fee": dollars(f, "fee_cost"),
     "Taker": f.get("is_taker"),
 } for f in fills])
 if not fill_df.empty:
-    fill_df["Cost"] = fill_df["Contracts"] * fill_df["Price"] * fill_df["Action"].map({"Buy": 1, "Sell": -1})
+    fill_df["Cost"] = fill_df["Contracts"] * fill_df["Price"]
     fill_df = fill_df.sort_values("Time (ET)", ascending=False)
 
 set_df = pd.DataFrame([{
     "Settled (ET)": when(s.get("settled_time")),
     "Market": s.get("ticker"),
     "Result": (s.get("market_result") or "").upper(),
-    "YES held": count(s, "yes_count"),
-    "NO held": count(s, "no_count"),
+    "YES bought": count(s, "yes_count"),
+    "NO bought": count(s, "no_count"),
     "Cost": dollars(s, "yes_total_cost") + dollars(s, "no_total_cost"),
-    "Payout": dollars(s, "revenue"),
+    "Paid back": dollars(s, "revenue") + min(count(s, "yes_count"), count(s, "no_count")),
+    "Fees": dollars(s, "fee_cost"),
 } for s in settlements])
 if not set_df.empty:
-    set_df["Profit"] = set_df["Payout"] - set_df["Cost"]
+    set_df["Profit"] = set_df["Paid back"] - set_df["Cost"] - set_df["Fees"]
     set_df = set_df.sort_values("Settled (ET)", ascending=False)
 
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Cash", f"${dollars(balance, 'balance'):,.2f}")
 c2.metric("Open positions value", f"${dollars(balance, 'portfolio_value'):,.2f}")
-c3.metric("Settled profit", f"${set_df['Profit'].sum():+,.2f}" if not set_df.empty else "—",
-          help="Payout minus cost on settled markets, before fees.")
-c4.metric("Fills", f"{len(fill_df):,}")
+c3.metric("Settled profit after fees", ('-' if set_df['Profit'].sum() < 0 else '+') + f"${abs(set_df['Profit'].sum()):,.2f}" if not set_df.empty else "—",
+          help="Payout plus $1 per YES+NO pair, minus what you paid and fees, over all settled markets.")
+c4.metric("Fees paid", f"${set_df['Fees'].sum():,.2f}" if not set_df.empty else "—")
 
 tab_pos, tab_fills, tab_set = st.tabs(["Open positions", "Fills", "Settled"])
 
@@ -203,7 +205,7 @@ with tab_set:
         st.line_chart(curve, y_label="Cumulative profit ($)")
         st.dataframe(set_df, hide_index=True, use_container_width=True,
                      column_config={c: st.column_config.NumberColumn(format="$%.2f")
-                                    for c in ("Cost", "Payout", "Profit")})
+                                    for c in ("Cost", "Paid back", "Fees", "Profit")})
 
 key_id = load_credentials()[0]
 st.caption(f"Read-only. Key ending …{key_id[-4:]} · only reachable from this PC · data cached 60 s.")
