@@ -8,6 +8,7 @@ import urllib.error
 from zoneinfo import ZoneInfo
 
 import pandas as pd
+import plotly.graph_objects as go
 import streamlit as st
 
 from kalshi_auth import KEY_ID_FILE, PEM_FILE, get, get_all, load_credentials
@@ -42,7 +43,9 @@ def load_portfolio():
     positions = get_all(creds, "/portfolio/positions", "market_positions", {"count_filter": "position"})
     fills = get_all(creds, "/portfolio/fills", "fills")
     settlements = get_all(creds, "/portfolio/settlements", "settlements")
-    return balance, positions, fills, settlements
+    deposits = get_all(creds, "/portfolio/deposits", "deposits")
+    withdrawals = get_all(creds, "/portfolio/withdrawals", "withdrawals")
+    return balance, positions, fills, settlements, deposits, withdrawals
 
 
 # ---------- page ----------
@@ -68,7 +71,7 @@ if st.button("Refresh"):
     load_portfolio.clear()
 
 try:
-    balance, positions, fills, settlements = load_portfolio()
+    balance, positions, fills, settlements, deposits, withdrawals = load_portfolio()
 except urllib.error.HTTPError as e:
     st.error(f"Kalshi refused the request ({e.code}). "
              + ("Check that the key ID and .pem file belong to the same key." if e.code == 401 else e.reason))
@@ -113,7 +116,7 @@ c3.metric("Settled profit after fees", ('-' if set_df['Profit'].sum() < 0 else '
           help="Payout plus $1 per YES+NO pair, minus what you paid and fees, over all settled markets.")
 c4.metric("Fees paid", f"${set_df['Fees'].sum():,.2f}" if not set_df.empty else "—")
 
-tab_pos, tab_fills, tab_set = st.tabs(["Open positions", "Fills", "Settled"])
+tab_money, tab_pos, tab_fills, tab_set = st.tabs(["Money in", "Open positions", "Fills", "Settled"])
 
 with tab_pos:
     pos_df = pd.DataFrame([{
@@ -151,6 +154,48 @@ with tab_set:
         st.dataframe(set_df, hide_index=True, use_container_width=True,
                      column_config={c: st.column_config.NumberColumn(format="$%.2f")
                                     for c in ("Cost", "Paid back", "Fees", "Profit")})
+
+with tab_money:
+    # One row per cash event: deposits/withdrawals change what you put in; settled
+    # markets change what it's worth. Card deposit fees come off the top.
+    applied = lambda rows: [r for r in rows if r.get("status", "applied") == "applied"]
+    events = pd.DataFrame(
+        [{"t": pd.Timestamp(d["created_ts"], unit="s", tz="UTC"), "put_in": d["amount_cents"] / 100,
+          "value": (d["amount_cents"] - d.get("fee_cents", 0)) / 100, "dep_fee": d.get("fee_cents", 0) / 100}
+         for d in applied(deposits)]
+        + [{"t": pd.Timestamp(w["created_ts"], unit="s", tz="UTC"), "put_in": -w["amount_cents"] / 100,
+            "value": -w["amount_cents"] / 100, "dep_fee": 0.0} for w in applied(withdrawals)]
+        + [{"t": t.tz_localize(ET), "put_in": 0.0, "value": p, "dep_fee": 0.0}
+           for t, p in zip(set_df["Settled (ET)"], set_df["Profit"]) if not pd.isna(t)])
+    if events.empty:
+        st.info("No deposits yet.")
+    else:
+        events = events.sort_values("t")
+        events["t"] = events["t"].dt.tz_convert(ET).dt.tz_localize(None)
+        events[["Put in", "Account value"]] = events[["put_in", "value"]].cumsum().values
+        now_value = dollars(balance, "balance") + dollars(balance, "portfolio_value")
+        line = pd.concat([events, pd.DataFrame([{"t": pd.Timestamp.now(ET).tz_localize(None),
+                                                 "Put in": events["Put in"].iloc[-1], "Account value": now_value}])])
+        put_in = events["put_in"].sum()
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total put in", f"${put_in:,.2f}")
+        m2.metric("Worth now", f"${now_value:,.2f}")
+        m3.metric("Card deposit fees", f"${events['dep_fee'].sum():,.2f}",
+                  help="Kalshi charges about 2% on debit-card deposits; bank transfers are usually free.")
+        fig = go.Figure()
+        fig.add_scatter(x=line["t"], y=line["Put in"], name="Put in", line=dict(shape="hv", color="#898781", dash="dot"))
+        fig.add_scatter(x=line["t"], y=line["Account value"], name="Account value", line=dict(shape="hv", color="#2a78d6"))
+        fig.update_layout(height=380, margin=dict(l=10, r=10, t=10, b=10), yaxis_tickprefix="$",
+                          legend=dict(orientation="h", y=1.08), hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
+        gap = now_value - events["Account value"].iloc[-1]
+        if abs(gap) > 1:
+            st.caption(f"{'-' if gap < 0 else '+'}${abs(gap):,.2f} of today's value isn't explained by deposits and settled markets "
+                       "(open positions, or settlements Kalshi has archived).")
+        st.dataframe(events[["t", "put_in", "dep_fee"]][events["put_in"] != 0].sort_values("t", ascending=False)
+                     .rename(columns={"t": "Time (ET)", "put_in": "Amount", "dep_fee": "Fee"}),
+                     hide_index=True, use_container_width=True,
+                     column_config={c: st.column_config.NumberColumn(format="$%.2f") for c in ("Amount", "Fee")})
 
 key_id = load_credentials()[0]
 st.caption(f"Read-only. Key ending …{key_id[-4:]} · only reachable from this PC · data cached 60 s.")
