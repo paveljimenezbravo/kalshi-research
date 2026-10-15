@@ -1,0 +1,10 @@
+# Never commit API keys
+secrets/
+.env
+*.pem
+__pycache__/
+*.sqlite*
+*.jsonl.gz
+.venv/
+live/
+data/

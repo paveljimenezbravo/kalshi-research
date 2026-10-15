@@ -1,0 +1,5 @@
+[server]
+headless = true  # 2_open_dashboard.bat opens the browser itself
+
+[browser]
+gatherUsageStats = false

@@ -1,0 +1,6 @@
+streamlit==1.65.0
+plotly==7.1.0
+pandas==3.0.6
+numpy==2.5.4
+tzdata==2026.5
+aiohttp==3.14.5
