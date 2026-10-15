@@ -27,7 +27,7 @@ ARM_AT = 2.0       # arm once the position is worth 2x what it cost (+100%)
 TRAIL = 0.20       # then sell if it falls 20% below its best value since arming
 CONFIRM = 2        # the drop must show on this many checks in a row (ignores one-tick blips)
 SLIPPAGE = 0.05    # accept fills up to 5 cents worse than the best bid, so the sell goes through
-POLL_S = 2.0
+POLL_S = 1.0
 
 STATE_FILE = HOME / "autosell_state.json"
 LOG_FILE = HOME / "logs" / "autosell.log"
@@ -48,6 +48,13 @@ def num(d, name, cents=False):
             return float(d[k])
     v = d.get(name) or 0
     return v / 100 if cents else float(v)
+
+
+def best_bids(book):
+    """Best YES and NO bids from /orderbook (0 when that side is empty or the market is closed)."""
+    ob = book.get("orderbook_fp") or {}
+    best = lambda levels: max((float(px) for px, _ in levels or []), default=0.0)
+    return best(ob.get("yes_dollars")), best(ob.get("no_dollars"))
 
 
 def decide(st, value, cost, contracts):
@@ -106,11 +113,11 @@ def check(creds, state, dry_run):
         if contracts == 0:
             continue
         held.add(ticker)
-        m = get(creds, f"/markets/{ticker}")["market"]
-        if m.get("status") != "active":
-            continue
-        yes_bid, yes_ask = num(m, "yes_bid", cents=True), num(m, "yes_ask", cents=True)
-        bid = yes_bid if contracts > 0 else num(m, "no_bid", cents=True)  # what one contract sells for now
+        # The order book is live; /markets/{ticker} prices lag it by ~10 s, which let a
+        # stop-loss meant for -20% fire at -47% on Oct 15.
+        yes_bid, no_bid = best_bids(get(creds, f"/markets/{ticker}/orderbook", {"depth": 1}))
+        yes_ask = 1 - no_bid if no_bid else 1.0
+        bid = yes_bid if contracts > 0 else no_bid  # what one contract sells for now
         if bid <= 0:
             continue  # no buyers this instant: don't judge the position on an empty book
         value = abs(contracts) * bid
