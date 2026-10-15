@@ -69,6 +69,14 @@ minutes, the largest spread you'd trade into, the fee, and the date range.
   `KALSHI_SERIES=KXETH15M` (or SOL/XRP/DOGE) to test the other coins.
 - **`RESEARCH_LOG.md`** lists every idea tested so far and how it came out.
 
+## Your own trades
+
+**`5_my_trades.bat`** opens a private page (localhost only, port 8502) with your
+balance, open positions, fills and settled results. It needs a Kalshi API key:
+the key ID in `%LOCALAPPDATA%\kalshi-btc15\secrets\key_id.txt` and the private
+key in `...\secrets\private_key.pem`. Both stay outside this folder, so they can't
+be committed. It only reads your portfolio; it can't place or cancel orders.
+
 ## Where things are
 
 | What | Where |
