@@ -165,7 +165,7 @@ with tab_money:
          for d in applied(deposits)]
         + [{"t": pd.Timestamp(w["created_ts"], unit="s", tz="UTC"), "put_in": -w["amount_cents"] / 100,
             "value": -w["amount_cents"] / 100, "dep_fee": 0.0} for w in applied(withdrawals)]
-        + [{"t": t.tz_localize(ET), "put_in": 0.0, "value": p, "dep_fee": 0.0}
+        + [{"t": t.tz_localize(ET).tz_convert("UTC"), "put_in": 0.0, "value": p, "dep_fee": 0.0}
            for t, p in zip(set_df["Settled (ET)"], set_df["Profit"]) if not pd.isna(t)])
     if events.empty:
         st.info("No deposits yet.")
