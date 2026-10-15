@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import streamlit as st
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 from config import HOME, KALSHI_API
 
@@ -43,9 +43,12 @@ def get(creds, path, params=None):
     """GET a portfolio endpoint, signed the way Kalshi requires (RSA-PSS over time + method + path)."""
     key_id, key = creds
     ts = str(int(time.time() * 1000))
-    sig = key.sign((ts + "GET" + API_PATH + path).encode(),
-                   padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
-                   hashes.SHA256())
+    msg = (ts + "GET" + API_PATH + path).encode()
+    if isinstance(key, rsa.RSAPrivateKey):
+        sig = key.sign(msg, padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
+                       hashes.SHA256())
+    else:  # Ed25519 keys sign the message directly
+        sig = key.sign(msg)
     url = KALSHI_API + path + ("?" + urllib.parse.urlencode(params) if params else "")
     req = urllib.request.Request(url, headers={
         "KALSHI-ACCESS-KEY": key_id,
