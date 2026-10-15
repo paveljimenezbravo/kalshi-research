@@ -1,5 +1,5 @@
 @echo off
-rem Auto-sell: once a position is up 100%, sells it if it then drops 20% from its best.
+rem Auto-sell: stop-loss -20%, lock in winners after +100%, max 20% of the account per position, daily stop -25%.
 rem It only works while this window is open. Close it to stop.
 cd /d "%~dp0"
 set PYTHONDONTWRITEBYTECODE=1
