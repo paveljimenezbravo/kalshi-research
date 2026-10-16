@@ -28,21 +28,25 @@ def load_credentials():
     return key_id, key
 
 
-def request(creds, method, path, params=None, body=None):
-    """Call the API, signed the way Kalshi requires (a signature over time + method + path)."""
+def auth_headers(creds, method, full_path):
+    """Kalshi's signature over time + method + path (full_path starts with /trade-api/v2)."""
     key_id, key = creds
     ts = str(int(time.time() * 1000))
-    msg = (ts + method + API_PATH + path).encode()
+    msg = (ts + method + full_path).encode()
     if isinstance(key, rsa.RSAPrivateKey):
         sig = key.sign(msg, padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.DIGEST_LENGTH),
                        hashes.SHA256())
     else:  # Ed25519 keys sign the message directly
         sig = key.sign(msg)
+    return {"KALSHI-ACCESS-KEY": key_id, "KALSHI-ACCESS-TIMESTAMP": ts,
+            "KALSHI-ACCESS-SIGNATURE": base64.b64encode(sig).decode()}
+
+
+def request(creds, method, path, params=None, body=None):
+    """Call the API, signed the way Kalshi requires."""
     url = KALSHI_API + path + ("?" + urllib.parse.urlencode(params) if params else "")
     req = urllib.request.Request(url, method=method, data=json.dumps(body).encode() if body else None, headers={
-        "KALSHI-ACCESS-KEY": key_id,
-        "KALSHI-ACCESS-TIMESTAMP": ts,
-        "KALSHI-ACCESS-SIGNATURE": base64.b64encode(sig).decode(),
+        **auth_headers(creds, method, API_PATH + path),
         "Accept": "application/json",
         "Content-Type": "application/json",
     })

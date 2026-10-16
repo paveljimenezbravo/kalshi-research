@@ -13,6 +13,7 @@ import sqlite3
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -76,11 +77,28 @@ class NotFound(Exception):
     pass
 
 
+def kalshi_signer():
+    """Signed reads get their own (larger) rate limit than anonymous ones. Uses the API key
+    in %LOCALAPPDATA%\kalshi-btc15\secrets if there is one; anonymous otherwise."""
+    try:
+        from kalshi_auth import auth_headers, load_credentials
+        creds = load_credentials()
+    except Exception:  # no key, or the cryptography package isn't installed
+        return None
+    return (lambda path: auth_headers(creds, "GET", path)) if creds else None
+
+
+SIGN = kalshi_signer()
+
+
 def get_json(url, pacer, tries=6):
     """GET with retries on rate limits (429), server errors and dropped connections."""
     for attempt in range(tries):
         pacer.wait()
-        req = urllib.request.Request(url, headers={"User-Agent": "btc15-backtest/1.0"})
+        headers = {"User-Agent": "btc15-backtest/1.0"}
+        if SIGN and url.startswith(KALSHI_API):
+            headers.update(SIGN(urllib.parse.urlparse(url).path))  # signed fresh on every try
+        req = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 return json.load(resp)

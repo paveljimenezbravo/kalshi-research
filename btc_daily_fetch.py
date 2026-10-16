@@ -69,13 +69,18 @@ def main():
     con = sqlite3.connect(DB, timeout=300)
     con.executescript(SCHEMA)
     con_btc = sqlite3.connect(f"file:{DB_PATH.as_posix()}?mode=ro", uri=True)
-    kalshi, deribit = Pacer(3), Pacer(4)
+    kalshi, deribit = Pacer(5), Pacer(4)
     last_btc = con_btc.execute("SELECT MAX(ts) FROM btc_1m").fetchone()[0]
     d = FIRST_DAY
     while d <= datetime.now(timezone.utc).date() - timedelta(days=1):
         event = f"KXBTCD-{d:%y%b%d}17".upper()
         if not con.execute("SELECT 1 FROM done WHERE key=?", (event,)).fetchone():
-            source, ms = event_markets(kalshi, event)
+            try:
+                source, ms = event_markets(kalshi, event)
+            except Exception as e:  # leave it for the next run
+                print(f"  {event}: skipped for now ({e})", flush=True)
+                d += timedelta(days=1)
+                continue
             if ms:
                 close = ts(ms[0]["close_time"])
                 spot = btc_at(con_btc, close - 20 * 3600) if close - 20 * 3600 <= last_btc else None

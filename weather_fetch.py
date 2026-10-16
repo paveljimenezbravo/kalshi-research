@@ -114,7 +114,7 @@ def candles(con, pacer):
             return ticker, None
 
     start = time.monotonic()
-    with ThreadPoolExecutor(20) as pool:
+    with ThreadPoolExecutor(12) as pool:
         for i in range(0, len(todo), 200):
             for ticker, cs in pool.map(one, todo[i:i + 200]):
                 if cs is not None:
@@ -159,9 +159,9 @@ def forecasts(con, pacer):
 
 def main():
     DB.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB)
+    con = sqlite3.connect(DB, timeout=300)  # weather_obs.py may be writing at the same time
     con.executescript(SCHEMA)
-    kalshi, meteo = Pacer(16), Pacer(2)
+    kalshi, meteo = Pacer(12), Pacer(2)
     print("Forecasts (Open-Meteo)...", flush=True)
     forecasts(con, meteo)
     print("Kalshi markets...", flush=True)
