@@ -26,7 +26,7 @@ SPLIT = "2026-04-01"
 WINDOW, MIN_DAYS = 90, 30
 MAX_SPREAD = 0.06
 MARGINS = (0.03, 0.05, 0.10)
-FEE = lambda p: np.ceil(0.07 * p * (1 - p) * 100) / 100  # taker fee on a 1-lot, rounded up to the cent
+FEE = lambda p: 0.07 * p * (1 - p)  # taker fee per contract (Kalshi rounds the order total up to the cent)
 rng = np.random.default_rng(0)
 
 
