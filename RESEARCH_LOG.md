@@ -52,6 +52,7 @@ A strategy is a candidate for paper trading only if all of these hold:
 5. **The bear case below is answered in writing.**
 
 Then two weeks of paper trading (logged before outcomes are known, settled afterwards) must agree before any real money is used. The human approves every order.
+| 33 | Oct 15 | #23's tail mispricing also exists on Polymarket's daily 'Bitcoin above ___' markets (noon ET, Binance BTC/USDT) | Polymarket public data since Dec 2025, all strikes of each daily event; hourly prices only (no bid/ask), so cost = price + an assumed half-spread, plus Polymarket's crypto taker fee 0.07 x P x (1-P) (`polymarket_tails_test.py`) | Pre-registered: #23's rule unchanged (6 h before the close, NO under 20c, YES over 80c), 1c spread assumed (0c and 2c shown); pass = > +0.5c with a 95% range above zero (days resampled whole), at 6 h and an hour later. Research only: Polymarket's global site is closed to US residents. | pending | Running |
 
 ## Candidates
 
