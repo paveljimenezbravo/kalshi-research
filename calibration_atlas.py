@@ -1,8 +1,9 @@
 """#25: where on Kalshi are prices most wrong? A calibration atlas by category.
 
-Samples settled markets from Kalshi's live list (roughly the last two months), up to 800
-per category and at most 2 per event, with at least 1,000 contracts traded; skips
-multi-leg parlays and the crypto/weather series studied elsewhere. Downloads each
+Picks up to 80 random series per category (skipping multi-leg parlays, which flood
+Kalshi's settled list, and the crypto/weather series studied elsewhere), lists each one's
+settled markets (roughly the last two months), and samples up to 800 markets per category,
+at most 2 per event, with at least 1,000 contracts traded. Downloads each
 market's hourly quotes over its last 30 hours (100 markets per request), then, 24 hours
 and 2 hours before the close:
   - calibration: Kalshi's price vs how often YES actually won
@@ -23,7 +24,7 @@ from config import HOME, KALSHI_API
 from fetch_data import Pacer, get_json, num, ts
 
 DB = HOME / "data" / "atlas.sqlite"
-MAX_PAGES, MIN_VOLUME, PER_CATEGORY, PER_EVENT = 1500, 1000, 800, 2
+SERIES_PER_CATEGORY, MIN_VOLUME, PER_CATEGORY, PER_EVENT = 80, 1000, 800, 2
 SKIP = ("KXMVE", "KXBTC", "KXETH", "KXSOL", "KXXRP", "KXDOGE", "KXHIGH")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS markets (ticker TEXT PRIMARY KEY, event TEXT, series TEXT, category TEXT, fee_mult REAL,
@@ -37,30 +38,29 @@ rng = np.random.default_rng(0)
 def list_markets(con, pacer):
     if con.execute("SELECT value FROM meta WHERE key='listed'").fetchone():
         return
-    series = {s["ticker"]: (s.get("category") or "?", float(s.get("fee_multiplier") or 1))
-              for s in get_json(f"{KALSHI_API}/series", pacer).get("series") or []}
-    cursor, kept = "", 0
-    for page in range(MAX_PAGES):
-        r = get_json(f"{KALSHI_API}/markets?status=settled&limit=1000" + (f"&cursor={cursor}" if cursor else ""), pacer)
-        rows = []
-        for m in r.get("markets") or []:
-            s = m["event_ticker"].split("-")[0]
-            vol = num(m, "volume") or 0
-            if (m.get("result") not in ("yes", "no") or s.startswith(SKIP) or vol < MIN_VOLUME
-                    or ts(m["close_time"]) - ts(m["open_time"]) < 26 * 3600):
-                continue
-            cat, mult = series.get(s, ("?", 1.0))
-            rows.append((m["ticker"], m["event_ticker"], s, cat, mult, ts(m["open_time"]), ts(m["close_time"]),
-                         m["result"], vol))
-        con.executemany("INSERT OR IGNORE INTO markets (ticker, event, series, category, fee_mult, open_ts, close_ts,"
-                        " result, volume) VALUES (?,?,?,?,?,?,?,?,?)", rows)
-        kept += len(rows)
-        cursor = r.get("cursor")
-        if page % 50 == 0:
-            con.commit()
-            print(f"  listed {page + 1} pages, kept {kept:,}", flush=True)
-        if not cursor:
-            break
+    by_cat = {}
+    for x in get_json(f"{KALSHI_API}/series", pacer).get("series") or []:
+        if not x["ticker"].startswith(SKIP):
+            by_cat.setdefault(x.get("category") or "?", []).append(x)
+    kept = 0
+    for cat, series in sorted(by_cat.items()):
+        n = 0
+        for i in rng.permutation(len(series))[:SERIES_PER_CATEGORY]:
+            x = series[i]
+            r = get_json(f"{KALSHI_API}/markets?series_ticker={x['ticker']}&status=settled&limit=1000", pacer)
+            rows = []
+            for m in r.get("markets") or []:
+                vol = num(m, "volume") or 0
+                if (m.get("result") in ("yes", "no") and vol >= MIN_VOLUME
+                        and ts(m["close_time"]) - ts(m["open_time"]) >= 26 * 3600):
+                    rows.append((m["ticker"], m["event_ticker"], x["ticker"], cat, float(x.get("fee_multiplier") or 1),
+                                 ts(m["open_time"]), ts(m["close_time"]), m["result"], vol))
+            con.executemany("INSERT OR IGNORE INTO markets (ticker, event, series, category, fee_mult, open_ts, "
+                            "close_ts, result, volume) VALUES (?,?,?,?,?,?,?,?,?)", rows)
+            n += len(rows)
+        con.commit()
+        kept += n
+        print(f"  {cat}: {n:,} markets from {min(len(series), SERIES_PER_CATEGORY)} series", flush=True)
     con.execute("INSERT OR REPLACE INTO meta VALUES ('listed', ?)", (str(kept),))
     con.commit()
 
