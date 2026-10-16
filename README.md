@@ -6,7 +6,7 @@ the daily BTC markets (against Deribit's options), daily-high weather brackets,
 AAA gas prices and a calibration atlas across Kalshi's categories: historical
 downloaders, backtests, a live order-book recorder and a set of edge tests.
 
-**Result so far: no edge found in the crypto markets.** Every idea is logged in
+**Result so far: one candidate out of 28 ideas.** Every idea is logged in
 [`RESEARCH_LOG.md`](RESEARCH_LOG.md) before it's tested and judged against
 acceptance criteria written in advance (edge above +0.5¢ per contract after costs
 with a 95% range excluding zero, holding out of sample, surviving realistic
@@ -15,8 +15,10 @@ effects, "traders overbet YES", ~45 chart indicators alone and combined with
 machine learning, and the 15-minute reversal (real, but already priced in) all
 failed, several of them only once tested on data they were never tuned on. A scan
 of every open Kalshi market found no riskless contradictions. The weather, daily
-BTC vs Deribit, gas-price and category tests are in progress; their results go in
-the log.
+BTC vs Deribit, gas-price, weather and category tests failed too. **One candidate:**
+selling the tails of the daily 5pm BTC market 6 hours before the close (#23,
++2.48¢ per contract over 252 days; it replicates more weakly on ETH/SOL/XRP/DOGE, #28).
+It is in paper trading, not live.
 
 > Not financial advice. Not affiliated with or endorsed by Kalshi. The research
 > scripts use public market data; if a Kalshi API key is present they sign their
@@ -94,6 +96,9 @@ what it tests and what counts as a pass.
 | `weather_obs.py`, `weather_intraday.py` | Same-day brackets vs the observed high so far (METAR) (#22) |
 | `gas_test.py` | AAA national gas price tomorrow vs a simple trend forecast (#26) |
 | `calibration_atlas.py` | Favourite-longshot bias by Kalshi category (#25) |
+| `sports_longshots.py` | Clean re-test of cheap sports contracts with fresh minute quotes (#27) |
+| `alt_daily_test.py` | #23's rule on ETH/SOL/XRP/DOGE daily markets (#28) |
+| `paper_tails.py`, `7_paper_tails.bat` | Paper trading for #23/#28: logs the rule's trades from the live book at ~11am ET, settles them after 5pm |
 
 ## Your own trades
 
