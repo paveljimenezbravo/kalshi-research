@@ -1,5 +1,8 @@
 # BTC 15-minute lab
 
+> **New here? Start with [`HANDOFF.md`](HANDOFF.md):** where things stand, the daily
+> routine, a map of the code, what's been ruled out and the ranked list of next steps.
+
 A research toolkit for hunting a trading edge on Kalshi. It started with the
 15-minute crypto markets (`KXBTC15M` and the ETH/SOL/XRP/DOGE copies) and grew to
 the daily BTC markets (against Deribit's options), daily-high weather brackets,

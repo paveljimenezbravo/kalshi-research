@@ -187,10 +187,13 @@ Test: 2 weeks of paper trades logged at 11am ET from the live order book, settle
 | Kalshi's settlement index is a weighted median of several exchanges; we use 2–3 of them | Final-minute pricing depends on it | Open |
 | Execution facts (queue priority, resting orders before the open, real latency) can't be measured without an account | The maker edge depends on them | Open: needs paper trading on Kalshi's demo exchange |
 
-## Next
+## Next (updated Oct 16)
 
-- A realistic maker test on the recorder's trade-by-trade data: a place in line at
-  the price you joined, filled by the actual trades at that price. Focus on #9
-  (sell YES / buy NO).
-- Re-test #8 on the Dec–Jun windows once they're downloaded.
-- Re-run `live_edge.py` and `flow.py` after a day or two of recording.
+The full, ranked list with context is in [`HANDOFF.md`](HANDOFF.md#open-leads-ranked).
+
+1. Paper-trade #23 (with #28's coins) daily at ~11am ET; apply the go/stop rules in Candidates.
+2. Big-news-day filter for #23 (Fed/CPI days), using data already downloaded.
+3. Maker (resting-order) version of #23, simulated with Kalshi's public trade history.
+4. #13, the queue-aware maker test on the 15-minute markets, once the recorder has a day of data.
+5. Retail-heavy venues (DraftKings Predictions, FanDuel Predicts, ForecastEx, Polymarket US):
+   check listings and same-event price gaps, starting with manual price logging.
