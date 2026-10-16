@@ -86,7 +86,7 @@ def so_far(obs, offset):
 
 
 def main():
-    con = sqlite3.connect(DB)
+    con = sqlite3.connect(DB, timeout=300)  # weather_fetch.py may be writing at the same time
     con.executescript(SCHEMA)
     end = datetime.now(timezone.utc).date() + timedelta(days=1)
     for series, (station, offset) in STATIONS.items():
