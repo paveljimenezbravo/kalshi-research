@@ -18,7 +18,8 @@ of every open Kalshi market found no riskless contradictions. The weather, daily
 BTC vs Deribit, gas-price, weather and category tests failed too. **One candidate:**
 selling the tails of the daily 5pm BTC market 6 hours before the close (#23,
 +2.48¢ per contract over 252 days; it replicates more weakly on ETH/SOL/XRP/DOGE, #28).
-It is in paper trading, not live.
+It is in paper trading, not live; the full case (odds, sizing, liquidity, go/stop
+rules) is in the log's [Candidates](RESEARCH_LOG.md#candidates) section.
 
 > Not financial advice. Not affiliated with or endorsed by Kalshi. The research
 > scripts use public market data; if a Kalshi API key is present they sign their

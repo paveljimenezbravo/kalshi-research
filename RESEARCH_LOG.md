@@ -53,6 +53,74 @@ A strategy is a candidate for paper trading only if all of these hold:
 
 Then two weeks of paper trading (logged before outcomes are known, settled afterwards) must agree before any real money is used. The human approves every order.
 
+## Candidates
+
+### #23: sell the tails of the daily 5pm BTC market, 6 hours before the close
+
+**Status (Oct 15): paper trading from Oct 16**, logged daily at ~11am ET for BTC, ETH, SOL,
+XRP and DOGE (`paper_tails.py`, `7_paper_tails.bat`). No real money.
+
+**Rule.** At 11am ET, for today's 5pm "BTC above $X" event (KXBTCD), on strikes that are
+$500 multiples within 5% of BTC: buy NO on every strike whose YES is priced under 20c (pay
+1 - the YES bid), buy YES on every strike priced over 80c (pay the YES ask). Hold to the 5pm
+settlement (60-second average of CF Benchmarks' BRTI).
+
+**Why it might work.** Late in the day, cheap "BTC makes a big move by 5pm" contracts behave
+like lottery tickets: YES priced 5-10c won 1.7% of the time, 10-20c won 8.0%. That is the
+favourite-longshot bias known from betting markets, here in a market where retail crypto
+traders are active.
+
+**Evidence for**
+- Pre-registered and passed in both halves: +3.01c and +2.08c per contract; all 252 days
+  +2.48c [+1.65, +3.27]; still above zero at the strict 99.8% level on the full sample.
+- Holds when filled at the next hour's price (+2.74c); positive in 10 of 11 months, on both
+  sides (NO on longshots +2.34c, YES on favourites +2.62c), above and below BTC.
+- A smooth time profile: 4 h +2.41c, 5 h +2.78c, 7 h +2.14c, 8 h +1.32c, fading to ~0 by 10-20 h.
+- Replicates, weaker, on ETH/SOL/XRP/DOGE (#28: +1.12c [+0.02, +2.19], all four positive).
+
+**Evidence against**
+- 32 ideas have been tried, so a lucky winner is expected; the 2nd half alone touches zero
+  at the strict level, and the 20 h version failed.
+- #28 only passed once DOGE was added (it was pre-registered, but the margin is thin).
+- The 252 days contain no crash day, which flatters the average (see sizing).
+- Not a general law: absent on stock indexes (#29) and on the range brackets of the same
+  BTC event (#30, priced fairly). It is specific to the crypto "above $X" ladders.
+- No hedge inside Kalshi (#32), and Deribit is not open to US residents.
+
+**Odds (my judgment, Oct 15).** A real edge exists right now after fees at small size: ~65%.
+At least +1.5c per contract going forward: ~40%. The full +2.5c: ~20%. Plan on live results
+around half the backtest (the best of many ideas tends to be the luckiest).
+
+**Economics (backtest, 6 h).** +2.48c per contract on an average price of 95c, about +2.7% per
+dollar staked; median 7 trades a day. Return on the day's stake: mean +2.77%, median +4.86%,
+sd 7.4%, 12% losing days, worst day -39.8%. At $1,000 staked a day: about +$28 a day on
+average, +$48 on a median day, -$398 on the worst backtest day; a real crash day could cost
+60-90% of the stake.
+
+**Sizing.** Kalshi is fully collateralised (no leverage for individuals), and borrowing to
+do this is how this payoff shape (small wins, rare big losses) blows up accounts. Kelly on the
+backtest days says stake ~1x the bankroll a day (a warning sign); with one -90% day per 250
+it says 0.92x, with three it says 0.60x. Use a quarter of that: **15-25% of the bankroll a day**.
+One-year simulation (365 days, backtest days resampled, a -90% day 1 in 250, 20% staked a day,
+$5,000 daily cap), starting from $1,000: median $5,486 if the edge is as backtested, $2,076 at
+half the edge, $820 if there is no edge (loses money in 76% of runs). All-in every day: median
+$38,015 but a 48% chance of a 50%+ drawdown on the way.
+
+**Liquidity.** On Oct 15, the tails of the next BTC event held ~$11,000 at the best prices
+(~$38,000 within 1c, but each cent costs ~40% of the edge). The strikes the rule trades turn
+over a median ~670,000 contracts a day (the whole event ~3.1 million). Kalshi's position
+accountability level is $25,000 per strike per member (contract terms). Practical ceiling:
+**~$10,000 staked a day, ~$150-250 a day of profit if the edge holds**; the other coins add
+~$1,000-2,000 a day (thin books). Below ~$5,000 a day there is no meaningful price impact.
+
+**Go / stop rules for paper and early live trading**
+- Needs ~1,000 trades for a real verdict (about 2-3 months across the five coins).
+- Stop if the average is below zero after 300 trades.
+- Go to small live size only if, after ~1,000 trades, the average is above +0.5c with a 95%
+  range above zero, and the fills recorded in the ledger had enough size at the logged price.
+- Live: quarter-Kelly sizing, a daily cap, and never more than the account can lose in one
+  crash day without stopping the plan.
+
 ## Bear cases for the open leads
 
 **#8, the model on weeknights 0–8 ET (+0.65¢):**
