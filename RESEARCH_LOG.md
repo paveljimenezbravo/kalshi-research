@@ -52,7 +52,7 @@ A strategy is a candidate for paper trading only if all of these hold:
 5. **The bear case below is answered in writing.**
 
 Then two weeks of paper trading (logged before outcomes are known, settled afterwards) must agree before any real money is used. The human approves every order.
-| 33 | Oct 15 | #23's tail mispricing also exists on Polymarket's daily 'Bitcoin above ___' markets (noon ET, Binance BTC/USDT) | Polymarket public data since Dec 2025, all strikes of each daily event; hourly prices only (no bid/ask), so cost = price + an assumed half-spread, plus Polymarket's crypto taker fee 0.07 x P x (1-P) (`polymarket_tails_test.py`) | Pre-registered: #23's rule unchanged (6 h before the close, NO under 20c, YES over 80c), 1c spread assumed (0c and 2c shown); pass = > +0.5c with a 95% range above zero (days resampled whole), at 6 h and an hour later. Research only: Polymarket's global site is closed to US residents. | pending | Running |
+| 33 | Oct 15 | #23's tail mispricing also exists on Polymarket's daily 'Bitcoin above ___' markets (noon ET, Binance BTC/USDT) | Polymarket public data since Dec 2025, all strikes of each daily event; hourly prices only (no bid/ask), so cost = price + an assumed half-spread, plus Polymarket's crypto taker fee 0.07 x P x (1-P) (`polymarket_tails_test.py`) | Pre-registered: #23's rule unchanged (6 h before the close, NO under 20c, YES over 80c), 1c spread assumed (0c and 2c shown); pass = > +0.5c with a 95% range above zero (days resampled whole), at 6 h and an hour later. Research only: Polymarket's global site is closed to US residents. | 3,341 strikes on 301 days (median volume ~$211,000 per strike). Polymarket is well calibrated 6 h before its noon close: YES at 5-10c won 6.1% (at 7.3c), 10-20c won 15.8% (at 14.2c), 80-90c won 81.8% (at 85.2c). The rule: **-0.57c [-0.97, -0.21]** with a 1c spread (pre-registered), -0.10c even with no spread, -1.03c with 2c; an hour later -0.65c. | Dead. The tail mispricing in #23 is specific to Kalshi's order flow (likely the retail traffic it gets through brokers), not to BTC daily markets in general, so it can't be scaled by trading the same thing on Polymarket. |
 
 ## Candidates
 
@@ -87,6 +87,8 @@ traders are active.
 - Not a general law: absent on stock indexes (#29) and on the range brackets of the same
   BTC event (#30, priced fairly). It is specific to the crypto "above $X" ladders.
 - No hedge inside Kalshi (#32), and Deribit is not open to US residents.
+- Not on Polymarket's equivalent daily BTC markets, which are priced fairly (#33): the
+  effect lives in Kalshi's order flow, so it can't be scaled by moving venue.
 
 **Odds (my judgment, Oct 15).** A real edge exists right now after fees at small size: ~65%.
 At least +1.5c per contract going forward: ~40%. The full +2.5c: ~20%. Plan on live results
@@ -113,6 +115,24 @@ over a median ~670,000 contracts a day (the whole event ~3.1 million). Kalshi's 
 accountability level is $25,000 per strike per member (contract terms). Practical ceiling:
 **~$10,000 staked a day, ~$150-250 a day of profit if the edge holds**; the other coins add
 ~$1,000-2,000 a day (thin books). Below ~$5,000 a day there is no meaningful price impact.
+
+**Scaling (asked on Oct 15: $300-500 a day from $20,000?).** 90-day simulation from $20,000,
+crash day 1 in 250, stake capped by liquidity; "no edge" keeps the same daily swings with a
+zero average:
+
+| Stake a day | Edge | Avg per day | Chance of a 30%+ drawdown | 50%+ |
+|---|---|---|---|---|
+| 20% ($4k) | as backtested | $120 | 2% | 0% |
+| 20% | half | $45 | 6% | 0% |
+| 20% | none | -$13 | 16% | 1% |
+| 50% ($10k, Kalshi's ceiling) | as backtested | $249 | 22% | 4% |
+| 50% | half | $108 | 38% | 12% |
+| 75% ($15k, beyond Kalshi's book) | as backtested | $472 | 43% | 19% |
+| 75% | half | $182 | 63% | 34% |
+
+$300-500 a day from $20,000 needs 50-75% of the bankroll every day, the full backtest edge
+(~20% likely) and more liquidity than Kalshi's BTC tails hold; Polymarket doesn't have the
+edge (#33). Realistic at a safe 20% stake: ~$45-120 a day if the edge is real.
 
 **Go / stop rules for paper and early live trading**
 - Needs ~1,000 trades for a real verdict (about 2-3 months across the five coins).
