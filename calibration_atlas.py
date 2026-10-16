@@ -135,8 +135,9 @@ def report(con):
                                       "longshots", "longshot_price", "longshot_yes_won"])
     print("\n  favourite side of everything priced <20c or >80c, after each series' fee (99.5% ranges):")
     print("  " + out.sort_values(["category", "hours"]).round(3).to_string(index=False).replace("\n", "\n  "))
-    passed = out.groupby("category").apply(lambda g: (g["lo_99.5"] > 0).all() and (g.edge_c > 0.5).all() and len(g) == 2,
-                                           include_groups=False)
+    # acceptance criterion 3 also applies: at least 1,000 trades for a results-at-settlement test
+    passed = out.groupby("category").apply(lambda g: (g["lo_99.5"] > 0).all() and (g.edge_c > 0.5).all() and len(g) == 2
+                                           and (g.trades >= 1000).all(), include_groups=False)
     print("\n  categories that pass at both decision times:", ", ".join(passed[passed].index) or "none")
 
 
