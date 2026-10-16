@@ -79,7 +79,7 @@ class NotFound(Exception):
 
 def kalshi_signer():
     """Signed reads get their own (larger) rate limit than anonymous ones. Uses the API key
-    in %LOCALAPPDATA%\kalshi-btc15\secrets if there is one; anonymous otherwise."""
+    from kalshi_auth.py's secrets folder if there is one; anonymous otherwise."""
     try:
         from kalshi_auth import auth_headers, load_credentials
         creds = load_credentials()
