@@ -1,19 +1,27 @@
 # BTC 15-minute lab
 
-A research toolkit for hunting a trading edge in Kalshi's 15-minute crypto
-markets (`KXBTC15M` and the ETH/SOL/XRP/DOGE copies): a historical downloader and
-backtester, a live order-book and trade recorder, and a set of edge tests.
+A research toolkit for hunting a trading edge on Kalshi. It started with the
+15-minute crypto markets (`KXBTC15M` and the ETH/SOL/XRP/DOGE copies) and grew to
+the daily BTC markets (against Deribit's options), daily-high weather brackets,
+AAA gas prices and a calibration atlas across Kalshi's categories: historical
+downloaders, backtests, a live order-book recorder and a set of edge tests.
 
-**Result so far: no edge found.** Every idea was judged against acceptance
-criteria written before seeing results (edge above +0.5¢ per contract after
-costs with a 95% range excluding zero, holding out of sample, surviving realistic
-execution). Pricing models, speed vs. Binance futures, thinner coins,
-time-of-day effects and "traders overbet YES" all failed, several of them only
-once tested on data they were never tuned on. The full record, including bear
-cases, is in [`RESEARCH_LOG.md`](RESEARCH_LOG.md).
+**Result so far: no edge found in the crypto markets.** Every idea is logged in
+[`RESEARCH_LOG.md`](RESEARCH_LOG.md) before it's tested and judged against
+acceptance criteria written in advance (edge above +0.5¢ per contract after costs
+with a 95% range excluding zero, holding out of sample, surviving realistic
+execution). Pricing models, speed vs. Binance futures, thinner coins, time-of-day
+effects, "traders overbet YES", ~45 chart indicators alone and combined with
+machine learning, and the 15-minute reversal (real, but already priced in) all
+failed, several of them only once tested on data they were never tuned on. A scan
+of every open Kalshi market found no riskless contradictions. The weather, daily
+BTC vs Deribit, gas-price and category tests are in progress; their results go in
+the log.
 
-> Not financial advice. Not affiliated with or endorsed by Kalshi. Uses public
-> market data only; no account or API key is needed to run anything here.
+> Not financial advice. Not affiliated with or endorsed by Kalshi. The research
+> scripts use public market data; if a Kalshi API key is present they sign their
+> read requests, which only raises the rate limit. The trades page and the
+> auto-seller need your own key.
 
 ## The original question
 
@@ -68,6 +76,24 @@ minutes, the largest spread you'd trade into, the fee, and the date range.
 - `edge.py` runs maker vs taker tests on the downloaded history. Set
   `KALSHI_SERIES=KXETH15M` (or SOL/XRP/DOGE) to test the other coins.
 - **`RESEARCH_LOG.md`** lists every idea tested so far and how it came out.
+
+## More research scripts
+
+Each prints its own report; the docstring at the top of each file says exactly
+what it tests and what counts as a pass.
+
+| Script | What it tests |
+|---|---|
+| `indicator_test.py` | Squeeze, ADX and momentum as direction calls on BTC (#17) |
+| `indicator_combo.py` | ~45 indicators, 7 classic rule combos and ML combinations vs Kalshi's own price (#19) |
+| `coin_prices.py`, `trend_fade_test.py` | The same rules, faded, on ETH/SOL/XRP/DOGE as fresh data (#20) |
+| `arb_scan.py` | Every open Kalshi event for prices that contradict each other after fees (#21) |
+| `deribit_compare.py` | Kalshi's next daily BTC markets vs Deribit's options-implied probabilities, live |
+| `btc_daily_fetch.py`, `btc_daily_test.py` | Daily BTC markets vs outcomes and vs Deribit's history (#23, #24) |
+| `weather_fetch.py`, `weather_test.py` | Daily-high brackets vs archived forecasts, walk-forward (#16) |
+| `weather_obs.py`, `weather_intraday.py` | Same-day brackets vs the observed high so far (METAR) (#22) |
+| `gas_test.py` | AAA national gas price tomorrow vs a simple trend forecast (#26) |
+| `calibration_atlas.py` | Favourite-longshot bias by Kalshi category (#25) |
 
 ## Your own trades
 
