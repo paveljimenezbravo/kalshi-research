@@ -35,6 +35,16 @@ CREATE TABLE IF NOT EXISTS candles (ticker TEXT, ts INTEGER, bid REAL, ask REAL,
 fee = lambda p: 0.07 * p * (1 - p)
 
 
+def strike(m):
+    """floor_strike, or for 'custom' markets (DOGE) the number in the ticker: ...-T0.0449999 -> 0.0449999."""
+    if m.get("floor_strike"):
+        return m["floor_strike"]
+    try:
+        return float(m["ticker"].rsplit("-T", 1)[1])
+    except (IndexError, ValueError):
+        return None
+
+
 def download(con, pacer):
     for series in SERIES:
         prev_value, d, n = None, FIRST_DAY, 0
@@ -58,12 +68,12 @@ def download(con, pacer):
                     con.execute("INSERT OR REPLACE INTO events VALUES (?,?,?,?,?)",
                                 (event, series, d.isoformat(), ts(ms[0]["close_time"]), value))
                     if prev_value:
-                        near = sorted((m for m in ms if m.get("result") in ("yes", "no") and m.get("floor_strike")
-                                       and abs(m["floor_strike"] / prev_value - 1) <= BAND),
-                                      key=lambda m: abs(m["floor_strike"] - prev_value))[:PER_EVENT]
+                        near = sorted((m for m in ms if m.get("result") in ("yes", "no") and strike(m)
+                                       and abs(strike(m) / prev_value - 1) <= BAND),
+                                      key=lambda m: abs(strike(m) - prev_value))[:PER_EVENT]
                         con.executemany("INSERT OR IGNORE INTO markets (ticker, event, series, close_ts, strike, result, "
                                         "source) VALUES (?,?,?,?,?,?,?)",
-                                        [(m["ticker"], event, series, ts(m["close_time"]), m["floor_strike"],
+                                        [(m["ticker"], event, series, ts(m["close_time"]), strike(m),
                                           m["result"], source) for m in near])
                         n += len(near)
                 else:
