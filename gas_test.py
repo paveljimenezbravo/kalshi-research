@@ -96,20 +96,24 @@ def download(con, pacer):
 
 
 def forecasts(aaa):
-    """For each day t+1: predicted change from day t, and the spread of past misses (walk-forward)."""
-    d = aaa.diff()
+    """For each day t+1 whose day t (and the 3 changes before it) are known: the predicted
+    price and the spread of past misses. aaa is a calendar-daily series, NaN on days
+    without a Kalshi event, so a change only counts between two consecutive days."""
+    d = aaa.diff().to_numpy()
     out = {}
-    days = list(aaa.index)
-    for i in range(len(days) - 1):
-        hist = d.iloc[max(1, i - WINDOW):i + 1].dropna()  # changes known by day t (inclusive)
-        if len(hist) < MIN_DAYS:
+    for i in range(3, len(aaa) - 1):
+        if np.isnan(aaa.iloc[i]) or np.isnan(d[i - 2:i + 1]).any():
             continue
-        y = hist.to_numpy()
-        X = np.column_stack([np.ones(len(y) - 3), y[2:-1], y[1:-2], y[:-3]])
-        coef, *_ = np.linalg.lstsq(X, y[3:], rcond=None)
-        resid = y[3:] - X @ coef
+        y = d[max(0, i - WINDOW):i + 1]
+        rows = [j for j in range(3, len(y)) if not np.isnan(y[j - 3:j + 1]).any()]
+        if len(rows) < MIN_DAYS:
+            continue
+        X = np.array([[1, y[j - 1], y[j - 2], y[j - 3]] for j in rows])
+        Y = np.array([y[j] for j in rows])
+        coef, *_ = np.linalg.lstsq(X, Y, rcond=None)
+        resid = Y - X @ coef
         pred = coef @ [1, y[-1], y[-2], y[-3]]
-        out[days[i + 1]] = (aaa.iloc[i] + pred, max(resid.std(ddof=4), 0.002))
+        out[aaa.index[i + 1]] = (aaa.iloc[i] + pred, max(resid.std(ddof=4), 0.002))
     return out
 
 
@@ -119,9 +123,9 @@ def report(con):
     aaa = m.groupby("day").value.first().sort_index()
     aaa.index = pd.to_datetime(aaa.index)
     aaa = aaa.asfreq("D")  # a missing day stays a gap (no forecast across it)
-    fc = forecasts(aaa.dropna())
+    fc = forecasts(aaa)
     print(f"\n{len(aaa.dropna())} days of AAA prices, {aaa.index.min():%Y-%m-%d} to {aaa.index.max():%Y-%m-%d}; "
-          f"daily change sd {aaa.diff().std() * 100:.2f}c")
+          f"day-to-day change sd {aaa.diff().std() * 100:.2f}c; forecasts for {len(fc)} days")
     m["mu"] = [fc.get(pd.Timestamp(d), (np.nan, np.nan))[0] for d in m.day]
     m["sd"] = [fc.get(pd.Timestamp(d), (np.nan, np.nan))[1] for d in m.day]
     m = m.dropna(subset=["mu"])
